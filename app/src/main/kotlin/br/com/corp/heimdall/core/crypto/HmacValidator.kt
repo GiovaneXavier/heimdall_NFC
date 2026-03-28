@@ -1,7 +1,7 @@
 package br.com.corp.heimdall.core.crypto
 
-import android.util.Base64
 import java.security.MessageDigest
+import java.util.Base64
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import javax.inject.Inject
@@ -42,12 +42,17 @@ class HmacValidator @Inject constructor() {
     }
 
     private fun decodeBase64Url(input: String): ByteArray? {
-        // Normaliza Base64url → Base64 padrão para o Android decoder
-        val normalized = input
-            .replace('-', '+')
-            .replace('_', '/')
+        // Remove padding existente (pode ser inválido) e adiciona padding correto.
+        // Usa getUrlDecoder() que rejeita caracteres Base64 padrão (+/) — apenas aceita Base64url (-_).
+        val stripped = input.trimEnd('=')
+        val padded = when (stripped.length % 4) {
+            0 -> stripped
+            2 -> "$stripped=="
+            3 -> "$stripped="
+            else -> return null  // comprimento % 4 == 1 é inválido
+        }
         return try {
-            Base64.decode(normalized, Base64.DEFAULT)
+            Base64.getUrlDecoder().decode(padded)
         } catch (_: IllegalArgumentException) {
             null
         }

@@ -104,6 +104,6 @@ class HmacValidatorTest {
         val mac = javax.crypto.Mac.getInstance("HmacSHA256")
         mac.init(javax.crypto.spec.SecretKeySpec(key.toByteArray(), "HmacSHA256"))
         val bytes = mac.doFinal(data.toByteArray())
-        return android.util.Base64.encodeToString(bytes, android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP or android.util.Base64.NO_PADDING)
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
     }
 }

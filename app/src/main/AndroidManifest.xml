@@ -18,9 +18,9 @@
     <application
         android:name=".HeimdallApplication"
         android:allowBackup="false"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@android:drawable/ic_menu_compass"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@android:drawable/ic_menu_compass"
         android:supportsRtl="false"
         android:theme="@style/Theme.Heimdall"
         android:hardwareAccelerated="true">

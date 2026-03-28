@@ -2,13 +2,12 @@ package br.com.corp.heimdall.di
 
 import android.content.Context
 import br.com.corp.heimdall.core.crypto.HmacValidator
-import br.com.corp.heimdall.core.security.SecurePreferences
 import br.com.corp.heimdall.core.util.SystemTimeProvider
 import br.com.corp.heimdall.core.util.TimeProvider
+import br.com.corp.heimdall.data.local.preferences.ConfigPreferences
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -31,6 +30,5 @@ object AppModule {
     @Provides
     @Singleton
     @ConfiguredSystemId
-    fun provideConfiguredSystemId(prefs: SecurePreferences): String =
-        prefs.getString("configured_system_id") ?: ""
+    fun provideConfiguredSystemId(config: ConfigPreferences): String = config.systemId
 }
