@@ -31,6 +31,15 @@ android {
             "String", "DEFAULT_PIN_HASH",
             "\"${project.findProperty("HEIMDALL_DEFAULT_PIN_HASH") ?: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92"}\""
         )
+
+        // URL base do backend — sobrescrever em local.properties com HEIMDALL_BASE_URL
+        buildConfigField(
+            "String", "BASE_URL",
+            "\"${project.findProperty("HEIMDALL_BASE_URL") ?: "https://heimdall.corp.internal/"}\""
+        )
+
+        // Timeout de rede em segundos
+        buildConfigField("long", "NETWORK_TIMEOUT_SECONDS", "10L")
     }
 
     buildFeatures {
