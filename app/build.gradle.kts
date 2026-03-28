@@ -123,6 +123,9 @@ dependencies {
     // ── Imagens ──
     implementation(libs.coil.compose)
 
+    // ── Permissões ──
+    implementation(libs.accompanist.permissions)
+
     // ── Coroutines ──
     implementation(libs.coroutines.android)
 
