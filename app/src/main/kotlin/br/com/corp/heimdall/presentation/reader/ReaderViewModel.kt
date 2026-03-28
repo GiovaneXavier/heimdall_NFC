@@ -3,6 +3,8 @@ package br.com.corp.heimdall.presentation.reader
 import android.nfc.tech.IsoDep
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import br.com.corp.heimdall.data.local.preferences.ConfigPreferences
+import br.com.corp.heimdall.data.local.preferences.ConfigPreferences.Channel
 import br.com.corp.heimdall.domain.model.DenialReason
 import br.com.corp.heimdall.domain.model.EmployeeInfo
 import br.com.corp.heimdall.domain.model.Token
@@ -36,7 +38,11 @@ class ReaderViewModel @Inject constructor(
     private val parseToken: ParseTokenUseCase,
     private val validateNew: ValidateNewTokenUseCase,
     private val validateLegacy: ValidateLegacyTokenUseCase,
+    config: ConfigPreferences,
 ) : ViewModel() {
+
+    /** Canal de leitura configurado neste ponto de acesso. */
+    val channel: Channel = config.channel ?: Channel.NFC
 
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Idle)
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()

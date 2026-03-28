@@ -2,6 +2,8 @@ package br.com.corp.heimdall.presentation.reader
 
 import android.nfc.tech.IsoDep
 import app.cash.turbine.test
+import br.com.corp.heimdall.data.local.preferences.ConfigPreferences
+import br.com.corp.heimdall.data.local.preferences.ConfigPreferences.Channel
 import br.com.corp.heimdall.domain.model.DenialReason
 import br.com.corp.heimdall.domain.model.EmployeeInfo
 import br.com.corp.heimdall.domain.model.Token
@@ -33,6 +35,7 @@ class ReaderViewModelTest {
     private val parseToken: ParseTokenUseCase = mockk()
     private val validateNew: ValidateNewTokenUseCase = mockk()
     private val validateLegacy: ValidateLegacyTokenUseCase = mockk()
+    private val config: ConfigPreferences = mockk(relaxed = true)
     private val isoDep: IsoDep = mockk(relaxed = true)
     private lateinit var viewModel: ReaderViewModel
     private val testDispatcher = StandardTestDispatcher()
@@ -44,7 +47,8 @@ class ReaderViewModelTest {
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
-        viewModel = ReaderViewModel(nfcHelper, parseToken, validateNew, validateLegacy)
+        every { config.channel } returns Channel.NFC
+        viewModel = ReaderViewModel(nfcHelper, parseToken, validateNew, validateLegacy, config)
     }
 
     @After
@@ -167,5 +171,74 @@ class ReaderViewModelTest {
         assertTrue(viewModel.uiState.value is ReaderUiState.NavigateToResult)
         viewModel.onResultConsumed()
         assertEquals(ReaderUiState.Idle, viewModel.uiState.value)
+    }
+
+    // ── Modo QR ───────────────────────────────────────────────────────────────
+
+    @Test
+    fun `onQrDetected QR com token novo aprovado emite NavigateToResult Approved`() = runTest {
+        every { parseToken("raw_qr") } returns newToken
+        coEvery { validateNew(newToken) } returns ValidationResult.Approved(employee)
+
+        viewModel.onQrDetected("raw_qr")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as ReaderUiState.NavigateToResult
+        assertTrue(state.result is ValidationResult.Approved)
+        assertEquals(employee, (state.result as ValidationResult.Approved).employee)
+    }
+
+    @Test
+    fun `onQrDetected com CORP ponto 1234 usa ValidateLegacyTokenUseCase`() = runTest {
+        every { parseToken("CORP.1234") } returns legacyToken
+        coEvery { validateLegacy(legacyToken) } returns ValidationResult.Approved(employee)
+
+        viewModel.onQrDetected("CORP.1234")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as ReaderUiState.NavigateToResult
+        assertTrue(state.result is ValidationResult.Approved)
+    }
+
+    @Test
+    fun `onQrDetected com token invalido emite Denied INVALID_FORMAT`() = runTest {
+        every { parseToken("garbage") } returns Token.Invalid
+
+        viewModel.onQrDetected("garbage")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value as ReaderUiState.NavigateToResult
+        assertEquals(DenialReason.INVALID_FORMAT, (state.result as ValidationResult.Denied).reason)
+    }
+
+    @Test
+    fun `onQrDetected durante Processing e ignorado`() = runTest {
+        every { parseToken("first") } returns newToken
+        coEvery { validateNew(newToken) } coAnswers {
+            kotlinx.coroutines.delay(Long.MAX_VALUE)
+            ValidationResult.Approved(employee)
+        }
+
+        viewModel.onQrDetected("first")
+        testDispatcher.scheduler.advanceTimeBy(1)
+
+        assertTrue(viewModel.uiState.value is ReaderUiState.Processing)
+
+        viewModel.onQrDetected("second")
+        testDispatcher.scheduler.advanceTimeBy(1)
+
+        assertTrue(viewModel.uiState.value is ReaderUiState.Processing)
+    }
+
+    @Test
+    fun `channel NFC retornado corretamente`() {
+        assertEquals(Channel.NFC, viewModel.channel)
+    }
+
+    @Test
+    fun `channel QR retornado corretamente quando configurado`() {
+        every { config.channel } returns Channel.QR
+        val qrViewModel = ReaderViewModel(nfcHelper, parseToken, validateNew, validateLegacy, config)
+        assertEquals(Channel.QR, qrViewModel.channel)
     }
 }
