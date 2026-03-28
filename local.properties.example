@@ -1,0 +1,12 @@
+# Copie este arquivo para local.properties e preencha os valores reais
+# NUNCA commite local.properties
+
+# Chave HMAC para validação de tokens NFC (deve ser igual à configurada no Huginn/Odin)
+HEIMDALL_TOKEN_HMAC_KEY=sua_chave_aqui
+
+# PIN padrão de manutenção (hash SHA-256 em hex, 6 dígitos)
+# Valor padrão abaixo corresponde ao PIN "123456" — altere antes de produção
+HEIMDALL_DEFAULT_PIN_HASH=8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92
+
+# SDK path (gerado automaticamente pelo Android Studio)
+sdk.dir=/path/to/android/sdk
