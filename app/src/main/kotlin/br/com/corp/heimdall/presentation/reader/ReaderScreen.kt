@@ -7,7 +7,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,8 +15,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Nfc
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,9 +32,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import br.com.corp.heimdall.R
 import br.com.corp.heimdall.domain.model.DenialReason
 import br.com.corp.heimdall.domain.model.ValidationResult
 import br.com.corp.heimdall.presentation.maintenance.MaintenanceDialog
@@ -142,7 +141,7 @@ private fun NfcIdleContent(onLogoTap: () -> Unit) {
         modifier = Modifier.padding(32.dp),
     ) {
         Icon(
-            imageVector = Icons.Filled.Nfc,
+            painter = painterResource(id = R.drawable.ic_nfc),
             contentDescription = "NFC",
             modifier = Modifier
                 .size(120.dp)

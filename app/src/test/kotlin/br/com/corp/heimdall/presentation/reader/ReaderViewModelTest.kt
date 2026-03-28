@@ -140,9 +140,18 @@ class ReaderViewModelTest {
 
     @Test
     fun `onAppBackground durante Processing retorna para Idle`() = runTest {
+        // Simula uma tag detectada com mocks que deixam a coroutine suspensa
+        every { nfcHelper.sendSelectApdu(isoDep) } returns "raw"
+        every { parseToken("raw") } returns newToken
+        coEvery { validateNew(newToken) } coAnswers {
+            kotlinx.coroutines.delay(Long.MAX_VALUE) // nunca completa
+            ValidationResult.Approved(employee)
+        }
+
         viewModel.onNfcTagDetected(isoDep)
         testDispatcher.scheduler.advanceTimeBy(1)
 
+        assertTrue(viewModel.uiState.value is ReaderUiState.Processing)
         viewModel.onAppBackground()
         assertEquals(ReaderUiState.Idle, viewModel.uiState.value)
     }
