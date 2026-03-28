@@ -3,12 +3,14 @@ package br.com.corp.heimdall.presentation.reader
 import android.nfc.tech.IsoDep
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import br.com.corp.heimdall.data.local.db.AccessLogEntry
 import br.com.corp.heimdall.data.local.preferences.ConfigPreferences
 import br.com.corp.heimdall.data.local.preferences.ConfigPreferences.Channel
 import br.com.corp.heimdall.domain.model.DenialReason
 import br.com.corp.heimdall.domain.model.EmployeeInfo
 import br.com.corp.heimdall.domain.model.Token
 import br.com.corp.heimdall.domain.model.ValidationResult
+import br.com.corp.heimdall.domain.repository.AuditLogRepository
 import br.com.corp.heimdall.domain.usecase.ParseTokenUseCase
 import br.com.corp.heimdall.domain.usecase.ValidateLegacyTokenUseCase
 import br.com.corp.heimdall.domain.usecase.ValidateNewTokenUseCase
@@ -28,6 +30,7 @@ import javax.inject.Inject
  * - Chamar [NfcReaderHelper] para extrair o token da tag NFC
  * - Chamar [ParseTokenUseCase] para distinguir o formato
  * - Despachar para [ValidateNewTokenUseCase] ou [ValidateLegacyTokenUseCase]
+ * - Gravar o resultado no audit log via [AuditLogRepository]
  * - Emitir [ReaderUiState] para a UI
  *
  * Novas leituras são ignoradas enquanto o estado for [ReaderUiState.Processing].
@@ -38,6 +41,7 @@ class ReaderViewModel @Inject constructor(
     private val parseToken: ParseTokenUseCase,
     private val validateNew: ValidateNewTokenUseCase,
     private val validateLegacy: ValidateLegacyTokenUseCase,
+    private val auditLog: AuditLogRepository,
     config: ConfigPreferences,
 ) : ViewModel() {
 
@@ -58,10 +62,12 @@ class ReaderViewModel @Inject constructor(
             _uiState.update { ReaderUiState.Processing }
             val raw = nfcHelper.sendSelectApdu(isoDep)
             if (raw == null) {
-                emitResult(ValidationResult.Denied(DenialReason.INVALID_FORMAT), employee = null)
+                val result = ValidationResult.Denied(DenialReason.INVALID_FORMAT)
+                writeAuditLog(result, Channel.NFC, deviceId = "", employeeId = "")
+                emitResult(result, employee = null)
                 return@launch
             }
-            processRaw(raw)
+            processRaw(raw, Channel.NFC)
         }
     }
 
@@ -74,7 +80,7 @@ class ReaderViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { ReaderUiState.Processing }
-            processRaw(raw)
+            processRaw(raw, Channel.QR)
         }
     }
 
@@ -90,22 +96,47 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private suspend fun processRaw(raw: String) {
+    private suspend fun processRaw(raw: String, channel: Channel) {
         when (val token = parseToken(raw)) {
             is Token.New -> {
                 val result = validateNew(token)
                 val employee = if (result is ValidationResult.Approved) result.employee else null
+                writeAuditLog(result, channel, token.deviceId, token.employeeId)
                 emitResult(result, employee)
             }
             is Token.Legacy -> {
                 val result = validateLegacy(token)
                 val employee = if (result is ValidationResult.Approved) result.employee else null
+                writeAuditLog(result, channel, deviceId = "", employeeId = token.code)
                 emitResult(result, employee)
             }
             is Token.Invalid -> {
-                emitResult(ValidationResult.Denied(DenialReason.INVALID_FORMAT), employee = null)
+                val result = ValidationResult.Denied(DenialReason.INVALID_FORMAT)
+                writeAuditLog(result, channel, deviceId = "", employeeId = "")
+                emitResult(result, employee = null)
             }
         }
+    }
+
+    private suspend fun writeAuditLog(
+        result: ValidationResult,
+        channel: Channel,
+        deviceId: String,
+        employeeId: String,
+    ) {
+        val approved = result is ValidationResult.Approved
+        val employee = if (result is ValidationResult.Approved) result.employee else null
+        auditLog.log(
+            AccessLogEntry(
+                timestampMs = System.currentTimeMillis(),
+                employeeId = employee?.id ?: employeeId,
+                employeeName = employee?.name ?: "",
+                deviceId = deviceId,
+                channel = channel.name,
+                result = if (approved) "APPROVED" else "DENIED",
+                denialReason = if (result is ValidationResult.Denied) result.reason.name else "",
+            )
+        )
     }
 
     private fun emitResult(result: ValidationResult, employee: EmployeeInfo?) {

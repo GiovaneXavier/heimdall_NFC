@@ -11,6 +11,7 @@ import br.com.corp.heimdall.domain.model.ValidationResult
 import br.com.corp.heimdall.domain.usecase.ParseTokenUseCase
 import br.com.corp.heimdall.domain.usecase.ValidateLegacyTokenUseCase
 import br.com.corp.heimdall.domain.usecase.ValidateNewTokenUseCase
+import br.com.corp.heimdall.domain.repository.AuditLogRepository
 import br.com.corp.heimdall.presentation.reader.nfc.NfcReaderHelper
 import io.mockk.coEvery
 import io.mockk.every
@@ -35,6 +36,7 @@ class ReaderViewModelTest {
     private val parseToken: ParseTokenUseCase = mockk()
     private val validateNew: ValidateNewTokenUseCase = mockk()
     private val validateLegacy: ValidateLegacyTokenUseCase = mockk()
+    private val auditLog: AuditLogRepository = mockk(relaxed = true)
     private val config: ConfigPreferences = mockk(relaxed = true)
     private val isoDep: IsoDep = mockk(relaxed = true)
     private lateinit var viewModel: ReaderViewModel
@@ -48,7 +50,7 @@ class ReaderViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         every { config.channel } returns Channel.NFC
-        viewModel = ReaderViewModel(nfcHelper, parseToken, validateNew, validateLegacy, config)
+        viewModel = ReaderViewModel(nfcHelper, parseToken, validateNew, validateLegacy, auditLog, config)
     }
 
     @After
@@ -238,7 +240,7 @@ class ReaderViewModelTest {
     @Test
     fun `channel QR retornado corretamente quando configurado`() {
         every { config.channel } returns Channel.QR
-        val qrViewModel = ReaderViewModel(nfcHelper, parseToken, validateNew, validateLegacy, config)
+        val qrViewModel = ReaderViewModel(nfcHelper, parseToken, validateNew, validateLegacy, auditLog, config)
         assertEquals(Channel.QR, qrViewModel.channel)
     }
 }
