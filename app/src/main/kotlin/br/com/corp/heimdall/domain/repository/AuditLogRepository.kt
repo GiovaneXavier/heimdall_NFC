@@ -11,6 +11,9 @@ interface AuditLogRepository {
     /** Observa os últimos [limit] registros em tempo real. */
     fun observeRecent(limit: Int = 100): Flow<List<AccessLogEntry>>
 
+    /** Retorna registros a partir de [sinceMs] (para sincronização com backend). */
+    suspend fun getEntriesSince(sinceMs: Long): List<br.com.corp.heimdall.data.local.db.AccessLogEntry>
+
     /** Remove registros anteriores a [beforeMs] (limpeza periódica). */
     suspend fun purgeOlderThan(beforeMs: Long)
 }

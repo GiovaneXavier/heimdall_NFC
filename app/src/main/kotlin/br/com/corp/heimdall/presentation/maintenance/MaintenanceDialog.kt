@@ -6,10 +6,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -24,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -31,8 +36,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.com.corp.heimdall.data.local.preferences.ConfigPreferences.Channel
 import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
-private enum class MaintenanceStep { PIN, OPTIONS, CHANGE_CHANNEL, CHANGE_PIN, DEVICE_INFO }
+private enum class MaintenanceStep { PIN, OPTIONS, CHANGE_CHANNEL, CHANGE_PIN, DEVICE_INFO, ACCESS_LOG }
 
 /**
  * Diálogo de manutenção protegido por PIN.
@@ -55,6 +63,7 @@ fun MaintenanceDialog(
     var step by remember { mutableStateOf(MaintenanceStep.PIN) }
     var pin by remember { mutableStateOf("") }
     var countdown by remember { mutableIntStateOf(0) }
+    val recentLogs by viewModel.recentLogs.collectAsStateWithLifecycle(initialValue = emptyList())
 
     // Countdown de lockout
     LaunchedEffect(uiState) {
@@ -101,6 +110,7 @@ fun MaintenanceDialog(
                     onChangeChannel = { step = MaintenanceStep.CHANGE_CHANNEL },
                     onChangePin = { step = MaintenanceStep.CHANGE_PIN },
                     onDeviceInfo = { step = MaintenanceStep.DEVICE_INFO },
+                    onAccessLog = { step = MaintenanceStep.ACCESS_LOG },
                 )
 
                 MaintenanceStep.CHANGE_CHANNEL -> ChangeChannelStep(
@@ -123,6 +133,11 @@ fun MaintenanceDialog(
                 MaintenanceStep.DEVICE_INFO -> DeviceInfoStep(
                     deviceId = deviceId,
                     appVersion = appVersion,
+                    onBack = { step = MaintenanceStep.OPTIONS },
+                )
+
+                MaintenanceStep.ACCESS_LOG -> AccessLogStep(
+                    entries = recentLogs,
                     onBack = { step = MaintenanceStep.OPTIONS },
                 )
             }
@@ -180,6 +195,7 @@ private fun OptionsStep(
     onChangeChannel: () -> Unit,
     onChangePin: () -> Unit,
     onDeviceInfo: () -> Unit,
+    onAccessLog: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = onChangeChannel, modifier = Modifier.fillMaxWidth()) {
@@ -187,6 +203,9 @@ private fun OptionsStep(
         }
         Button(onClick = onChangePin, modifier = Modifier.fillMaxWidth()) {
             Text("Alterar PIN")
+        }
+        TextButton(onClick = onAccessLog, modifier = Modifier.fillMaxWidth()) {
+            Text("Log de acessos")
         }
         TextButton(onClick = onDeviceInfo, modifier = Modifier.fillMaxWidth()) {
             Text("Informações do dispositivo")
@@ -281,6 +300,62 @@ private fun DeviceInfoStep(deviceId: String, appVersion: String, onBack: () -> U
         Text("Versão:", style = MaterialTheme.typography.labelMedium)
         Text(appVersion)
         Spacer(Modifier.height(12.dp))
+        TextButton(onClick = onBack) { Text("Voltar") }
+    }
+}
+
+@Composable
+private fun AccessLogStep(
+    entries: List<br.com.corp.heimdall.data.local.db.AccessLogEntry>,
+    onBack: () -> Unit,
+) {
+    val fmt = remember { SimpleDateFormat("dd/MM HH:mm:ss", Locale.getDefault()) }
+
+    Column {
+        Text("Últimos acessos (${entries.size})", style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.height(8.dp))
+
+        if (entries.isEmpty()) {
+            Text("Nenhum registro ainda.", style = MaterialTheme.typography.bodySmall)
+        } else {
+            LazyColumn(modifier = Modifier.heightIn(max = 280.dp)) {
+                items(entries, key = { it.id }) { entry ->
+                    val approved = entry.result == "APPROVED"
+                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                text = fmt.format(Date(entry.timestampMs)),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            Text(
+                                text = if (approved) "✓ OK" else "✗ NEGADO",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (approved) Color(0xFF4CAF50) else Color(0xFFF44336),
+                            )
+                        }
+                        Text(
+                            text = buildString {
+                                if (entry.employeeName.isNotBlank()) append(entry.employeeName)
+                                else if (entry.employeeId.isNotBlank()) append(entry.employeeId)
+                                else append("—")
+                                append("  [${entry.channel}]")
+                                if (!approved && entry.denialReason.isNotBlank()) {
+                                    append("  ${entry.denialReason}")
+                                }
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Divider()
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
         TextButton(onClick = onBack) { Text("Voltar") }
     }
 }

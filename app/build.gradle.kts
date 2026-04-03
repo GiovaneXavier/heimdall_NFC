@@ -135,6 +135,11 @@ dependencies {
     // ── Permissões ──
     implementation(libs.accompanist.permissions)
 
+    // ── WorkManager + Hilt ──
+    implementation(libs.work.runtime)
+    implementation(libs.hilt.work)
+    kapt(libs.hilt.androidx.compiler)
+
     // ── Coroutines ──
     implementation(libs.coroutines.android)
 

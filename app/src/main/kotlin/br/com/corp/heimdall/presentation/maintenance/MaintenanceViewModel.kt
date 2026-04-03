@@ -1,9 +1,12 @@
 package br.com.corp.heimdall.presentation.maintenance
 
 import androidx.lifecycle.ViewModel
+import br.com.corp.heimdall.data.local.db.AccessLogEntry
 import br.com.corp.heimdall.data.local.preferences.ConfigPreferences
 import br.com.corp.heimdall.data.local.preferences.ConfigPreferences.Channel
+import br.com.corp.heimdall.domain.repository.AuditLogRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +25,11 @@ private const val LOCKOUT_DURATION_MS = 60_000L
 @HiltViewModel
 class MaintenanceViewModel @Inject constructor(
     private val config: ConfigPreferences,
+    auditLog: AuditLogRepository,
 ) : ViewModel() {
+
+    /** Últimos 30 registros de acesso para exibição no diálogo de manutenção. */
+    val recentLogs: Flow<List<AccessLogEntry>> = auditLog.observeRecent(limit = 30)
 
     private val _uiState = MutableStateFlow<MaintenanceUiState>(MaintenanceUiState.Locked)
     val uiState: StateFlow<MaintenanceUiState> = _uiState.asStateFlow()

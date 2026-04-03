@@ -1,6 +1,7 @@
 package br.com.corp.heimdall.di
 
 import br.com.corp.heimdall.BuildConfig
+import br.com.corp.heimdall.data.remote.api.AuditSyncApi
 import br.com.corp.heimdall.data.remote.api.HeimdallApi
 import br.com.corp.heimdall.data.remote.api.LegacyApi
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
@@ -67,4 +68,9 @@ object NetworkModule {
     @Singleton
     fun provideLegacyApi(retrofit: Retrofit): LegacyApi =
         retrofit.create(LegacyApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideAuditSyncApi(retrofit: Retrofit): AuditSyncApi =
+        retrofit.create(AuditSyncApi::class.java)
 }
