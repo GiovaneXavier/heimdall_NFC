@@ -17,5 +17,8 @@ class AuditLogRepositoryImpl @Inject constructor(
     override fun observeRecent(limit: Int): Flow<List<AccessLogEntry>> =
         dao.observeRecent(limit)
 
+    override suspend fun getEntriesSince(sinceMs: Long): List<AccessLogEntry> =
+        dao.getEntriesSince(sinceMs)
+
     override suspend fun purgeOlderThan(beforeMs: Long) = dao.deleteOlderThan(beforeMs)
 }

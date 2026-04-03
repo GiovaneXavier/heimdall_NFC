@@ -40,6 +40,13 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
 
+        // Kiosk mode: entra em lock task se o app for Device Owner ou estiver pinado pelo MDM.
+        // Em dispositivos não configurados para kiosk, startLockTask() lança SecurityException
+        // e é ignorado silenciosamente.
+        if (config.isConfigured) {
+            try { startLockTask() } catch (_: SecurityException) { /* sem Device Owner — ok */ }
+        }
+
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
         nfcPendingIntent = PendingIntent.getActivity(
             this, 0,

@@ -2,6 +2,7 @@ package br.com.corp.heimdall.presentation.maintenance
 
 import br.com.corp.heimdall.data.local.preferences.ConfigPreferences
 import br.com.corp.heimdall.data.local.preferences.ConfigPreferences.Channel
+import br.com.corp.heimdall.domain.repository.AuditLogRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -13,11 +14,12 @@ import org.junit.Test
 class MaintenanceViewModelTest {
 
     private val config: ConfigPreferences = mockk(relaxed = true)
+    private val auditLog: AuditLogRepository = mockk(relaxed = true)
     private lateinit var viewModel: MaintenanceViewModel
 
     @Before
     fun setup() {
-        viewModel = MaintenanceViewModel(config)
+        viewModel = MaintenanceViewModel(config, auditLog)
     }
 
     @Test

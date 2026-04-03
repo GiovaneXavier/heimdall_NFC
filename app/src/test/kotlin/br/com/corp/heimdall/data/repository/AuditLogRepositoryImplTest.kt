@@ -2,6 +2,7 @@ package br.com.corp.heimdall.data.repository
 
 import br.com.corp.heimdall.data.local.db.AccessLogDao
 import br.com.corp.heimdall.data.local.db.AccessLogEntry
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -44,6 +45,17 @@ class AuditLogRepositoryImplTest {
         every { dao.observeRecent(100) } returns flowOf(entries)
 
         val result = repository.observeRecent(100).first()
+
+        assertEquals(entries, result)
+    }
+
+    @Test
+    fun `getEntriesSince delega para dao getEntriesSince`() = runTest {
+        val since = 1711500000_000L
+        val entries = listOf(sampleEntry)
+        coEvery { dao.getEntriesSince(since) } returns entries
+
+        val result = repository.getEntriesSince(since)
 
         assertEquals(entries, result)
     }

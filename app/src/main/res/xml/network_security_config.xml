@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Configuração de segurança de rede do Heimdall.
+
+    - Cleartext (HTTP) bloqueado em todos os ambientes.
+    - Para adicionar certificate pinning em produção:
+        <domain-config>
+            <domain includeSubdomains="true">heimdall.corp.internal</domain>
+            <pin-set>
+                <pin digest="SHA-256">BASE64_DO_SPKI_HASH_PRIMARIO</pin>
+                <pin digest="SHA-256">BASE64_DO_SPKI_HASH_BACKUP</pin>
+            </pin-set>
+        </domain-config>
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Permite HTTP apenas em debug (emulador/lab sem TLS) -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>
