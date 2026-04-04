@@ -40,14 +40,49 @@ class ValidateNewTokenUseCase @Inject constructor(
     companion object {
         /** Janela temporal máxima em segundos (±30 s). */
         const val TIMESTAMP_WINDOW_SECONDS = 30L
+
+        /** Número de falhas consecutivas antes de bloquear. */
+        private const val RATE_LIMIT_THRESHOLD = 5
+
+        /** Duração do bloqueio em segundos após atingir o threshold. */
+        private const val RATE_LIMIT_COOLDOWN_SECONDS = 30L
     }
+
+    @Volatile private var consecutiveFailures = 0
+    @Volatile private var blockedUntil = 0L
 
     /**
      * Valida [token] através do pipeline de 4 etapas.
      *
+     * Rate limiting: após [RATE_LIMIT_THRESHOLD] falhas consecutivas, bloqueia
+     * novas tentativas por [RATE_LIMIT_COOLDOWN_SECONDS] segundos.
+     *
      * @return [ValidationResult.Approved] ou [ValidationResult.Denied] com o motivo.
      */
     suspend operator fun invoke(token: Token.New): ValidationResult {
+        // Rate limiting — verifica bloqueio antes de qualquer validação
+        val now = timeProvider.nowSeconds()
+        if (blockedUntil > now) {
+            return ValidationResult.Denied(DenialReason.RATE_LIMITED)
+        }
+
+        val result = validate(token)
+
+        when (result) {
+            is ValidationResult.Approved -> consecutiveFailures = 0
+            is ValidationResult.Denied   -> {
+                consecutiveFailures++
+                if (consecutiveFailures >= RATE_LIMIT_THRESHOLD) {
+                    blockedUntil = timeProvider.nowSeconds() + RATE_LIMIT_COOLDOWN_SECONDS
+                    consecutiveFailures = 0
+                }
+            }
+        }
+
+        return result
+    }
+
+    private suspend fun validate(token: Token.New): ValidationResult {
         // Etapa 1 — HMAC
         val payload = "${token.deviceId}|${token.employeeId}|${token.systemId}|${token.timestamp}|${token.nonce}"
         if (!hmacValidator.verify(BuildConfig.TOKEN_HMAC_KEY, payload, token.hmac)) {

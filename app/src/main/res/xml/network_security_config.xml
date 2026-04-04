@@ -3,14 +3,16 @@
     Configuração de segurança de rede do Heimdall.
 
     - Cleartext (HTTP) bloqueado em todos os ambientes.
-    - Para adicionar certificate pinning em produção:
-        <domain-config>
-            <domain includeSubdomains="true">heimdall.corp.internal</domain>
-            <pin-set>
-                <pin digest="SHA-256">BASE64_DO_SPKI_HASH_PRIMARIO</pin>
-                <pin digest="SHA-256">BASE64_DO_SPKI_HASH_BACKUP</pin>
-            </pin-set>
-        </domain-config>
+    - Certificate pinning ativo para o domínio do backend.
+
+    IMPORTANTE: antes de ir para produção, substitua os hashes abaixo pelos
+    hashes reais do certificado do servidor. Para obter:
+
+      openssl s_client -connect SEU_SERVIDOR:443 2>/dev/null \
+        | openssl x509 -pubkey -noout \
+        | openssl pkey -pubin -outform der \
+        | openssl dgst -sha256 -binary \
+        | base64
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
@@ -19,7 +21,21 @@
         </trust-anchors>
     </base-config>
 
-    <!-- Permite HTTP apenas em debug (emulador/lab sem TLS) -->
+    <!-- Certificate pinning — substitua pelos hashes reais em produção -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">heimdall.corp.internal</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+        <pin-set expiration="2027-01-01">
+            <!-- Hash primário — substitua pelo SPKI hash do certificado atual -->
+            <pin digest="SHA-256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
+            <!-- Hash de backup — certificado reserva para renovação sem lockout -->
+            <pin digest="SHA-256">BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
+        </pin-set>
+    </domain-config>
+
+    <!-- Permite certificados de usuário apenas em debug (emulador/lab sem TLS) -->
     <debug-overrides>
         <trust-anchors>
             <certificates src="system" />

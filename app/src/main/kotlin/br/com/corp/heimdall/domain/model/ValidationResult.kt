@@ -28,6 +28,7 @@ sealed class ValidationResult {
  * - [EMPLOYEE_NOT_FOUND]     → "Funcionário não encontrado"
  * - [SERVER_UNAVAILABLE]     → "Servidor indisponível"
  * - [INVALID_FORMAT]         → "Formato inválido"
+ * - [RATE_LIMITED]           → "Muitas tentativas. Aguarde."
  */
 enum class DenialReason {
     INVALID_HMAC,
@@ -39,4 +40,5 @@ enum class DenialReason {
     EMPLOYEE_NOT_FOUND,
     SERVER_UNAVAILABLE,
     INVALID_FORMAT,
+    RATE_LIMITED,
 }

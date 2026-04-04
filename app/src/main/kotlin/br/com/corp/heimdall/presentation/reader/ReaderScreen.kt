@@ -338,4 +338,5 @@ private fun DenialReason.toDisplayMessage(): String = when (this) {
     DenialReason.EMPLOYEE_NOT_FOUND     -> "Funcionário não encontrado"
     DenialReason.SERVER_UNAVAILABLE     -> "Servidor indisponível"
     DenialReason.INVALID_FORMAT         -> "Formato inválido"
+    DenialReason.RATE_LIMITED           -> "Muitas tentativas. Aguarde."
 }
