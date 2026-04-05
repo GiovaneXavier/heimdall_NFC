@@ -50,6 +50,7 @@ class ReaderViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         every { config.channel } returns Channel.NFC
+        every { nfcHelper.lastDebugInfo } returns null
         viewModel = ReaderViewModel(nfcHelper, parseToken, validateNew, validateLegacy, auditLog, config)
     }
 

@@ -51,6 +51,10 @@ class ReaderViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Idle)
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
 
+    /** Debug info da última leitura NFC (hex, SW bytes, payload). Null até a primeira leitura. */
+    private val _nfcDebugInfo = MutableStateFlow<String?>(null)
+    val nfcDebugInfo: StateFlow<String?> = _nfcDebugInfo.asStateFlow()
+
     /**
      * Chamado pela [br.com.corp.heimdall.MainActivity] quando uma tag NFC é detectada.
      * Extrai o token via APDU e inicia o pipeline de validação.
@@ -61,6 +65,7 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { ReaderUiState.Processing }
             val raw = nfcHelper.sendSelectApdu(isoDep)
+            _nfcDebugInfo.update { nfcHelper.lastDebugInfo }
             if (raw == null) {
                 val result = ValidationResult.Denied(DenialReason.INVALID_FORMAT)
                 writeAuditLog(result, Channel.NFC, deviceId = "", employeeId = "")
@@ -68,6 +73,23 @@ class ReaderViewModel @Inject constructor(
                 return@launch
             }
             processRaw(raw, Channel.NFC)
+        }
+    }
+
+    /**
+     * Chamado quando uma tag NFC é detectada mas não suporta IsoDep.
+     * Atualiza o debug sem iniciar validação.
+     */
+    fun onNfcTagWithoutIsoDep(techList: Array<String>) {
+        _nfcDebugInfo.update {
+            buildString {
+                appendLine("Tag NFC detectada — SEM IsoDep!")
+                appendLine("Tecnologias encontradas:")
+                techList.forEach { appendLine("  • $it") }
+                appendLine()
+                appendLine("O Huginn precisa estar em foreground")
+                appendLine("e com HCE ativo para expor IsoDep.")
+            }.trimEnd()
         }
     }
 

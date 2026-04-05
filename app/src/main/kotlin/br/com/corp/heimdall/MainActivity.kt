@@ -69,8 +69,8 @@ class MainActivity : ComponentActivity() {
         nfcAdapter?.enableForegroundDispatch(
             this,
             nfcPendingIntent,
-            null,  // intercept all TECH_DISCOVERED intents
-            arrayOf(arrayOf(IsoDep::class.java.name)),
+            null,  // sem filtro de IntentFilter — aceita qualquer NFC
+            null,  // sem filtro de tech — aceita qualquer tecnologia
         )
     }
 
@@ -82,11 +82,18 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.action == NfcAdapter.ACTION_TECH_DISCOVERED) {
+        val nfcActions = setOf(
+            NfcAdapter.ACTION_TECH_DISCOVERED,
+            NfcAdapter.ACTION_TAG_DISCOVERED,
+            NfcAdapter.ACTION_NDEF_DISCOVERED,
+        )
+        if (intent.action in nfcActions) {
             val tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG, android.nfc.Tag::class.java)
             val isoDep = tag?.let { IsoDep.get(it) }
             if (isoDep != null) {
                 readerViewModel.onNfcTagDetected(isoDep)
+            } else {
+                readerViewModel.onNfcTagWithoutIsoDep(tag?.techList ?: emptyArray())
             }
         }
     }

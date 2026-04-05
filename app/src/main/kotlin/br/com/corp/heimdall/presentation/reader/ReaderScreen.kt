@@ -18,9 +18,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -108,8 +112,10 @@ fun ReaderScreen(
         )
     }
 
+    val nfcDebugInfo by viewModel.nfcDebugInfo.collectAsStateWithLifecycle()
+
     when (viewModel.channel) {
-        Channel.NFC -> NfcReaderContent(uiState = uiState, onLogoTap = onLogoTap)
+        Channel.NFC -> NfcReaderContent(uiState = uiState, debugInfo = nfcDebugInfo, onLogoTap = onLogoTap)
         Channel.QR  -> QrReaderContent(
             uiState = uiState,
             onQrDetected = viewModel::onQrDetected,
@@ -121,7 +127,7 @@ fun ReaderScreen(
 // ── Modo NFC ──────────────────────────────────────────────────────────────────
 
 @Composable
-private fun NfcReaderContent(uiState: ReaderUiState, onLogoTap: () -> Unit) {
+private fun NfcReaderContent(uiState: ReaderUiState, debugInfo: String?, onLogoTap: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -132,6 +138,36 @@ private fun NfcReaderContent(uiState: ReaderUiState, onLogoTap: () -> Unit) {
             is ReaderUiState.Processing -> CircularProgressIndicator(Modifier.size(72.dp))
             else -> NfcIdleContent(onLogoTap)
         }
+
+        NfcDebugPanel(
+            debugInfo = debugInfo ?: "Aguardando leitura NFC...",
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+}
+
+@Composable
+private fun NfcDebugPanel(debugInfo: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(max = 200.dp)
+            .background(Color.Black.copy(alpha = 0.85f))
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .verticalScroll(rememberScrollState()),
+    ) {
+        Text(
+            text = "DEBUG NFC",
+            style = MaterialTheme.typography.labelSmall,
+            color = Color(0xFF00FF88),
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = debugInfo,
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+        )
     }
 }
 
