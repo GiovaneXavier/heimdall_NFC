@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.activity.ComponentActivity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -72,7 +73,7 @@ import com.google.accompanist.permissions.shouldShowRationale
 @Composable
 fun ReaderScreen(
     onNavigateToResult: (Boolean, String, String, String) -> Unit,
-    viewModel: ReaderViewModel = hiltViewModel(),
+    viewModel: ReaderViewModel = hiltViewModel(LocalContext.current as ComponentActivity),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
