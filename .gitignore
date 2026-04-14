@@ -10,3 +10,6 @@
 local.properties
 *.jks
 *.keystore
+app/build/
+.claude/
+gradle/gradle-daemon-jvm.properties
