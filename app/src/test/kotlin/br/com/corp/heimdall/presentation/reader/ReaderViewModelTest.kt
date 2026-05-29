@@ -50,7 +50,6 @@ class ReaderViewModelTest {
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         every { config.channel } returns Channel.NFC
-        every { nfcHelper.lastDebugInfo } returns null
         viewModel = ReaderViewModel(nfcHelper, parseToken, validateNew, validateLegacy, auditLog, config)
     }
 
@@ -61,7 +60,7 @@ class ReaderViewModelTest {
 
     @Test
     fun `onNfcTagDetected com token valido aprovado emite NavigateToResult Approved`() = runTest {
-        every { nfcHelper.sendSelectApdu(isoDep) } returns "raw_token"
+        coEvery { nfcHelper.sendSelectApdu(isoDep) } returns "raw_token"
         every { parseToken("raw_token") } returns newToken
         coEvery { validateNew(newToken) } returns ValidationResult.Approved(employee)
 
@@ -77,7 +76,7 @@ class ReaderViewModelTest {
 
     @Test
     fun `onNfcTagDetected com APDU retornando null emite NavigateToResult Denied INVALID_FORMAT`() = runTest {
-        every { nfcHelper.sendSelectApdu(isoDep) } returns null
+        coEvery { nfcHelper.sendSelectApdu(isoDep) } returns null
 
         viewModel.onNfcTagDetected(isoDep)
         advanceUntilIdle()
@@ -88,7 +87,7 @@ class ReaderViewModelTest {
 
     @Test
     fun `onNfcTagDetected com token invalido emite NavigateToResult Denied`() = runTest {
-        every { nfcHelper.sendSelectApdu(isoDep) } returns "bad"
+        coEvery { nfcHelper.sendSelectApdu(isoDep) } returns "bad"
         every { parseToken("bad") } returns Token.Invalid
 
         viewModel.onNfcTagDetected(isoDep)
@@ -125,7 +124,7 @@ class ReaderViewModelTest {
     @Test
     fun `chamadas durante Processing sao ignoradas`() = runTest {
         // Bloqueia a coroutine para simular Processing contínuo
-        every { nfcHelper.sendSelectApdu(isoDep) } returns "raw"
+        coEvery { nfcHelper.sendSelectApdu(isoDep) } returns "raw"
         every { parseToken("raw") } returns newToken
         coEvery { validateNew(newToken) } coAnswers {
             kotlinx.coroutines.delay(10_000) // nunca completa neste teste
@@ -148,7 +147,7 @@ class ReaderViewModelTest {
     @Test
     fun `onAppBackground durante Processing retorna para Idle`() = runTest {
         // Simula uma tag detectada com mocks que deixam a coroutine suspensa
-        every { nfcHelper.sendSelectApdu(isoDep) } returns "raw"
+        coEvery { nfcHelper.sendSelectApdu(isoDep) } returns "raw"
         every { parseToken("raw") } returns newToken
         coEvery { validateNew(newToken) } coAnswers {
             kotlinx.coroutines.delay(Long.MAX_VALUE) // nunca completa
@@ -165,7 +164,7 @@ class ReaderViewModelTest {
 
     @Test
     fun `onResultConsumed retorna para Idle`() = runTest {
-        every { nfcHelper.sendSelectApdu(isoDep) } returns "raw"
+        coEvery { nfcHelper.sendSelectApdu(isoDep) } returns "raw"
         every { parseToken("raw") } returns Token.Invalid
 
         viewModel.onNfcTagDetected(isoDep)

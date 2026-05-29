@@ -51,7 +51,11 @@ class ReaderViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Idle)
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
 
-    /** Debug info da última leitura NFC (hex, SW bytes, payload). Null até a primeira leitura. */
+    /**
+     * Info de diagnóstico técnico não-sensível da última leitura NFC.
+     * Atualmente preenchida apenas quando a tag não expõe IsoDep (lista de tecnologias).
+     * Nunca contém payload de token, hex bruto ou PII. Null até a primeira leitura.
+     */
     private val _nfcDebugInfo = MutableStateFlow<String?>(null)
     val nfcDebugInfo: StateFlow<String?> = _nfcDebugInfo.asStateFlow()
 
@@ -65,7 +69,6 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { ReaderUiState.Processing }
             val raw = nfcHelper.sendSelectApdu(isoDep)
-            _nfcDebugInfo.update { nfcHelper.lastDebugInfo }
             if (raw == null) {
                 val result = ValidationResult.Denied(DenialReason.INVALID_FORMAT)
                 writeAuditLog(result, Channel.NFC, deviceId = "", employeeId = "")

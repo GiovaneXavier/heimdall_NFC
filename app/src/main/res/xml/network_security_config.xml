@@ -21,18 +21,34 @@
         </trust-anchors>
     </base-config>
 
-    <!-- Certificate pinning — substitua pelos hashes reais em produção -->
+    <!--
+        Certificate pinning — DESATIVADO temporariamente.
+
+        Os hashes placeholder (AAAA.../BBBB...) foram removidos: pinar valores
+        falsos quebraria 100% das conexões TLS em produção. O pinning permanece
+        comentado até a infra fornecer os SPKI hashes reais (folha + backup) do
+        certificado de `heimdall.corp.internal`.
+
+        Cleartext continua bloqueado para o domínio via cleartextTrafficPermitted="false".
+
+        Para reativar: obter os hashes reais e descomentar o <pin-set> abaixo.
+          openssl s_client -connect heimdall.corp.internal:443 2>/dev/null \
+            | openssl x509 -pubkey -noout \
+            | openssl pkey -pubin -outform der \
+            | openssl dgst -sha256 -binary \
+            | base64
+    -->
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">heimdall.corp.internal</domain>
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
+        <!--
         <pin-set expiration="2027-01-01">
-            <!-- Hash primário — substitua pelo SPKI hash do certificado atual -->
-            <pin digest="SHA-256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
-            <!-- Hash de backup — certificado reserva para renovação sem lockout -->
-            <pin digest="SHA-256">BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
+            <pin digest="SHA-256">SUBSTITUIR_PELO_SPKI_HASH_REAL_DA_FOLHA=</pin>
+            <pin digest="SHA-256">SUBSTITUIR_PELO_SPKI_HASH_REAL_DE_BACKUP=</pin>
         </pin-set>
+        -->
     </domain-config>
 
     <!-- Permite certificados de usuário apenas em debug (emulador/lab sem TLS) -->

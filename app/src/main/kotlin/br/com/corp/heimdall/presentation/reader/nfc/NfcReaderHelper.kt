@@ -1,6 +1,11 @@
 package br.com.corp.heimdall.presentation.reader.nfc
 
 import android.nfc.tech.IsoDep
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -14,61 +19,39 @@ import javax.inject.Singleton
 class NfcReaderHelper @Inject constructor() {
 
     /**
-     * Informações de debug da última leitura APDU.
-     * Atualizado a cada chamada de [sendSelectApdu], inclusive em caso de erro.
-     */
-    @Volatile
-    var lastDebugInfo: String? = null
-        private set
-
-    /**
      * Envia SELECT APDU com o AID Huginn e retorna o payload do token como String.
      *
+     * Resiliência:
+     * - Aplica [ISO_DEP_TIMEOUT_MS] no driver NFC ([IsoDep.setTimeout]).
+     * - Envolve a transação em [withTimeout] para cobrir OEMs que ignoram o timeout do driver.
+     * - Garante [IsoDep.close] no bloco `finally`, mesmo em caso de exceção (evita resource leak).
+     *
      * @param isoDep Tag NFC obtida via `IsoDep.get(tag)`.
-     * @return String do token decodificado, ou `null` em caso de falha ou resposta inválida.
+     * @return String do token decodificado, ou `null` em caso de falha, timeout ou resposta inválida.
      */
-    fun sendSelectApdu(isoDep: IsoDep): String? {
-        var response: ByteArray? = null
-        return try {
+    suspend fun sendSelectApdu(isoDep: IsoDep): String? = withContext(Dispatchers.IO) {
+        try {
+            isoDep.timeout = ISO_DEP_TIMEOUT_MS
             if (!isoDep.isConnected) {
                 isoDep.connect()
             }
-            response = isoDep.transceive(SELECT_AID_APDU)
-            lastDebugInfo = buildDebugInfo(response, exception = null)
+            val response = withTimeout(TRANSCEIVE_TIMEOUT_MS) {
+                isoDep.transceive(SELECT_AID_APDU)
+            }
             parseApduResponse(response)
-        } catch (e: Exception) {
-            // IOException, TagLostException, etc. — retorna null sem propagar
-            lastDebugInfo = buildDebugInfo(response, exception = e)
+        } catch (timeout: TimeoutCancellationException) {
+            // Tag lenta / ataque de slow-read — aborta sem bloquear a thread.
             null
+        } catch (cancel: CancellationException) {
+            // Cancelamento estruturado real (ex: escopo cancelado) — propaga.
+            throw cancel
+        } catch (e: Exception) {
+            // IOException, TagLostException, etc. — retorna null sem propagar.
+            null
+        } finally {
+            runCatching { isoDep.close() }
         }
     }
-
-    private fun buildDebugInfo(response: ByteArray?, exception: Exception?): String = buildString {
-        if (exception != null) {
-            appendLine("ERRO: ${exception.javaClass.simpleName}")
-            appendLine("Msg:  ${exception.message}")
-            if (response != null) appendLine("Hex:  ${response.toHexString()}")
-            return@buildString
-        }
-        if (response == null) {
-            appendLine("Resposta: null")
-            return@buildString
-        }
-        appendLine("Tamanho: ${response.size} bytes")
-        appendLine("Hex:     ${response.toHexString()}")
-        if (response.size >= 2) {
-            val sw1 = response[response.size - 2]
-            val sw2 = response[response.size - 1]
-            val swOk = sw1 == SW_OK_1 && sw2 == SW_OK_2
-            appendLine("SW:      %02X %02X  (%s)".format(sw1.toInt() and 0xFF, sw2.toInt() and 0xFF, if (swOk) "OK" else "ERRO"))
-            if (swOk && response.size > 2) {
-                val decoded = String(response.copyOf(response.size - 2), Charsets.UTF_8)
-                appendLine("Payload: $decoded")
-            }
-        } else {
-            appendLine("Resposta muito curta (< 2 bytes)")
-        }
-    }.trimEnd()
 
     /**
      * Valida e extrai o payload da resposta APDU.
@@ -93,6 +76,12 @@ class NfcReaderHelper @Inject constructor() {
     }
 
     companion object {
+        /** Timeout do driver NFC para a transação APDU, em milissegundos. */
+        private const val ISO_DEP_TIMEOUT_MS = 2_000
+
+        /** Timeout da coroutine — margem extra sobre [ISO_DEP_TIMEOUT_MS] para OEMs que ignoram o driver. */
+        private const val TRANSCEIVE_TIMEOUT_MS = 2_500L
+
         /** AID proprietário do HCE do Huginn: `F0 53 52 42 52 00`. */
         private val SELECT_AID_APDU = byteArrayOf(
             0x00,                           // CLA
@@ -108,6 +97,3 @@ class NfcReaderHelper @Inject constructor() {
         private const val SW_OK_2: Byte = 0x00
     }
 }
-
-private fun ByteArray.toHexString(): String =
-    joinToString(" ") { "%02X".format(it.toInt() and 0xFF) }
