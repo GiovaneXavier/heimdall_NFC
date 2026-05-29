@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- NFC -->
     <uses-permission android:name="android.permission.NFC" />
@@ -24,6 +25,8 @@
         android:supportsRtl="false"
         android:theme="@style/Theme.Heimdall"
         android:hardwareAccelerated="true"
+        android:usesCleartextTraffic="false"
+        android:extractNativeLibs="false"
         android:networkSecurityConfig="@xml/network_security_config">
 
         <activity
@@ -57,6 +60,20 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <!-- WorkManager: inicialização on-demand. HeimdallApplication implementa
+             Configuration.Provider, então o inicializador padrão do androidx.startup
+             precisa ser removido para evitar dupla inicialização do WorkManager. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
     </application>
 
