@@ -1,0 +1,8 @@
+# Garante que o wrapper Unix sempre tenha quebras de linha LF, independente do
+# core.autocrlf da máquina. Sem isto, um checkout no Windows + re-commit poderia
+# introduzir CRLF e quebrar o CI Linux com "bad interpreter: /bin/sh^M".
+gradlew text eol=lf
+*.sh    text eol=lf
+
+# Scripts Windows mantêm CRLF.
+*.bat   text eol=crlf
