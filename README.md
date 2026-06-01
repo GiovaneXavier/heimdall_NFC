@@ -6,6 +6,20 @@ App Android nativo de controle de acesso corporativo. Instalado em tablets/smart
 Odin Admin → Huginn Mobile → [NFC / QR] → Heimdall → Backend REST
 ```
 
+Parte do ecossistema de controle de acesso SRBR (3 apps + módulo compartilhado).
+
+---
+
+## Documentação do ecossistema
+
+| Documento | Conteúdo |
+|---|---|
+| [INTEGRATION_GUIDE.md](../INTEGRATION_GUIDE.md) | Contrato de comunicação: token, Base64Url, nonce, HMAC, vetores de teste |
+| [BUILD_CICD.md](../BUILD_CICD.md) | Build, injeção de chaves HMAC, CI/CD, certificate pinning |
+| [ARCHITECTURE.md](../ARCHITECTURE.md) | Arquitetura do ecossistema e papel deste leitor |
+
+Documentação interna deste repositório: [Arquitetura Técnica](docs/ARCHITECTURE.md) · [Deploy e Administração](docs/DEPLOYMENT.md).
+
 ---
 
 ## Requisitos
