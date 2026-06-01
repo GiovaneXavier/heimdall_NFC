@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,38 @@ plugins {
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.serialization)
+}
+
+// ── Resolução do segredo HMAC ──
+// Lê a chave de uma Gradle property (local.properties / gradle.properties / -P) ou de uma
+// variável de ambiente. Em builds RELEASE a ausência da chave ABORTA o build (sem fallback).
+// Em builds debug, usa um valor de dev explicitamente falso, nunca apto a produção.
+val isReleaseBuild = gradle.startParameter.taskNames.any { taskName ->
+    val n = taskName.lowercase()
+    n.contains("release") ||
+        n == "build" || n.endsWith(":build") ||
+        n == "assemble" || n.endsWith(":assemble") ||
+        n == "bundle" || n.endsWith(":bundle")
+}
+
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
+val tokenHmacKey: String = run {
+    // Precedência: -P / gradle.properties  >  local.properties  >  variável de ambiente.
+    val value = (project.findProperty("HEIMDALL_TOKEN_HMAC_KEY") as String?)
+        ?: localProps.getProperty("HEIMDALL_TOKEN_HMAC_KEY")
+        ?: System.getenv("HEIMDALL_TOKEN_HMAC_KEY")
+    when {
+        !value.isNullOrBlank() -> value
+        isReleaseBuild -> throw GradleException(
+            "Build release abortado: a chave 'HEIMDALL_TOKEN_HMAC_KEY' nao foi encontrada. " +
+                "Defina-a em local.properties ou como variavel de ambiente antes de gerar o release."
+        )
+        else -> "DEV_ONLY_FALLBACK_NEVER_RELEASE"
+    }
 }
 
 android {
@@ -20,11 +54,9 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Chave HMAC para validação de tokens — definir em local.properties
-        buildConfigField(
-            "String", "TOKEN_HMAC_KEY",
-            "\"${project.findProperty("HEIMDALL_TOKEN_HMAC_KEY") ?: "SRBR_HEIMDALL_TOKEN_SECRET_2024"}\""
-        )
+        // Chave HMAC para validação de tokens — injetada em tempo de build (ver resolução acima).
+        // Sem fallback hardcoded: ausência em release aborta o build.
+        buildConfigField("String", "TOKEN_HMAC_KEY", "\"$tokenHmacKey\"")
 
         // Hash SHA-256 do PIN de manutenção padrão (123456)
         buildConfigField(
